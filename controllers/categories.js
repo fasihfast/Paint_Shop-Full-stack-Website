@@ -1,53 +1,57 @@
 import {db} from '../database/db.js';
 
-export const get_all_product_categories = async (req, res) => {
+export const get_all_product_categories = (req, res) => {
     const query = `
         SELECT category_id, category_name
         FROM Categories
-        WHERE deleted_at IS NULL
     `;
 
-    try {
-        // Execute the query
-        const [results] = await db.promise().execute(query);
+    // Execute the query using the callback-style API
+    db.execute(query, (err, results) => {
+        if (err) {
+            console.error(err);
+            return res.status(500).json({ error: 'Database error' });
+        }
 
+        // Check if any categories were found
         if (results.length === 0) {
             return res.status(404).json({ message: 'No product categories found' });
         }
 
+        // Return the results if found
         res.status(200).json(results);
-    } catch (err) {
-        console.error(err);
-        res.status(500).json({ error: 'Database error' });
-    }
+    });
 };
 
-export const get_single_category = async (req, res) => {
+
+export const get_single_category = (req, res) => {
     const categoryId = req.params.id;  // Get category ID from URL
 
     const query = `
         SELECT category_id, category_name, description, parent_category_id
         FROM Categories
-        WHERE category_id = ? AND deleted_at IS NULL
+        WHERE category_id = ? 
     `;
 
-    try {
-        // Execute the query with the category ID
-        const [results] = await db.promise().execute(query, [categoryId]);
+    // Execute the query using the callback-style API
+    db.execute(query, [categoryId], (err, results) => {
+        if (err) {
+            console.error('Database error:', err);
+            return res.status(500).json({ error: 'Database error' });
+        }
 
         // Check if the category exists
         if (results.length === 0) {
             return res.status(404).json({ message: 'Category not found or deleted' });
         }
 
-        res.status(200).json(results[0]);  // Return the category details
-    } catch (err) {
-        console.error(err);
-        res.status(500).json({ error: 'Database error' });
-    }
+        // Return the category details
+        res.status(200).json(results[0]);
+    });
 };
 
-export const create_category = async (req, res) => {
+
+export const create_category = (req, res) => {
     const { category_name, description, parent_category_id } = req.body;
 
     // Validate required fields
@@ -55,30 +59,31 @@ export const create_category = async (req, res) => {
         return res.status(400).json({ message: 'Category name is required' });
     }
 
-    try {
-        const query = `
-            INSERT INTO Categories (category_name, description, parent_category_id)
-            VALUES (?, ?, ?)
-        `;
+    const query = `
+        INSERT INTO Categories (category_name, description, parent_category_id)
+        VALUES (?, ?, ?)
+    `;
 
-        // Execute the insert query
-        const [results] = await db.promise().execute(query, [
-            category_name, 
-            description || null,       // description is optional
-            parent_category_id || null // parent_category_id is optional
-        ]);
+    // Execute the insert query using callback style
+    db.execute(query, [
+        category_name, 
+        description || null,       // description is optional
+        parent_category_id || null // parent_category_id is optional
+    ], (err, results) => {
+        if (err) {
+            console.error('Database error:', err);
+            return res.status(500).json({ error: 'Database error' });
+        }
 
         res.status(201).json({
             message: 'Category created successfully',
             category_id: results.insertId
         });
-    } catch (err) {
-        console.error(err);
-        res.status(500).json({ error: 'Database error' });
-    }
+    });
 };
 
-export const update_category = async (req, res) => {
+
+export const update_category = (req, res) => {
     const categoryId = req.params.id;  // Get the category ID from URL
     const { category_name, description, parent_category_id } = req.body;
 
@@ -90,17 +95,20 @@ export const update_category = async (req, res) => {
     const query = `
         UPDATE Categories
         SET category_name = ?, description = ?, parent_category_id = ?
-        WHERE category_id = ? AND deleted_at IS NULL
+        WHERE category_id = ? 
     `;
 
-    try {
-        // Execute the update query
-        const [results] = await db.promise().execute(query, [
-            category_name, 
-            description || null,        // Optional field
-            parent_category_id || null, // Optional field
-            categoryId                  // Category to update
-        ]);
+    // Execute the update query using callback style
+    db.execute(query, [
+        category_name, 
+        description || null,        // Optional field
+        parent_category_id || null, // Optional field
+        categoryId                  // Category to update
+    ], (err, results) => {
+        if (err) {
+            console.error('Database error:', err);
+            return res.status(500).json({ error: 'Database error' });
+        }
 
         // Check if any rows were affected (i.e., if the category exists and is not deleted)
         if (results.affectedRows === 0) {
@@ -108,13 +116,11 @@ export const update_category = async (req, res) => {
         }
 
         res.status(200).json({ message: 'Category updated successfully' });
-    } catch (err) {
-        console.error(err);
-        res.status(500).json({ error: 'Database error' });
-    }
+    });
 };
 
-export const delete_category = async (req, res) => {
+
+export const delete_category = (req, res) => {
     const categoryId = req.params.id;  // Get the category ID from URL
 
     const query = `
@@ -122,9 +128,12 @@ export const delete_category = async (req, res) => {
         WHERE category_id = ?
     `;
 
-    try {
-        // Execute the delete query
-        const [results] = await db.promise().execute(query, [categoryId]);
+    // Execute the delete query using callback style
+    db.execute(query, [categoryId], (err, results) => {
+        if (err) {
+            console.error('Database error:', err);
+            return res.status(500).json({ error: 'Database error' });
+        }
 
         // Check if any rows were affected (i.e., if the category existed)
         if (results.affectedRows === 0) {
@@ -132,11 +141,9 @@ export const delete_category = async (req, res) => {
         }
 
         res.status(200).json({ message: 'Category permanently deleted' });
-    } catch (err) {
-        console.error(err);
-        res.status(500).json({ error: 'Database error' });
-    }
+    });
 };
+
 
 
 
